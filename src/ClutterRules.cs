@@ -119,11 +119,6 @@ namespace TYR_DeClutterer
             }
         }
 
-        public static IEnumerable<Cat> AllCats()
-        {
-            foreach (var (cat, _) in Keywords) yield return cat;
-        }
-
         // exclude.txt: "이름조각" 또는 "맵ID:이름조각", # 주석. 레이드 시작마다 다시 읽는다.
         public static void LoadUserExcludes(string pluginDir, string mapId)
         {

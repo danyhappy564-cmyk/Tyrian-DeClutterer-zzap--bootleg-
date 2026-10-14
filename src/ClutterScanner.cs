@@ -11,7 +11,7 @@ namespace TYR_DeClutterer
 
     internal enum Verdict : byte
     {
-        NotAnalyzed, Gone, NoMatch, NeverName, UserExcluded, Protected, ProtectedParent, HasCollider, NoMesh, Candidate,
+        NotAnalyzed, Gone, NoMatch, NeverName, UserExcluded, Protected, ProtectedParent, HasCollider, NoMesh, Candidate, DecalAtLoad,
     }
 
     internal sealed class Entry
@@ -38,6 +38,7 @@ namespace TYR_DeClutterer
         private enum Phase { Idle, CollectLod, CollectDecal, CollectParticle, Analyze, Apply, Done }
 
         private const int MaxItemsPerFrame = 4000;
+        private const int MaxDebugLines = 300; // 자세한 로그도 한 번 적용에 이만큼만(레이드 중 GC가 꺼져 문자열이 쌓임)
         private const int MaxParentDepth = 64;
 
         private static readonly List<Entry> Entries = new List<Entry>();
@@ -57,7 +58,9 @@ namespace TYR_DeClutterer
 
         // 적용 결과 집계
         private static int _hidden, _far;
-        private static readonly Dictionary<Cat, int> HiddenByCat = new Dictionary<Cat, int>();
+        // 분류별 숨김 수. Dictionary<enum,int>는 Mono에서 조회마다 박싱이 생겨 배열로 둔다. [8] = 기타(이름 무관 옵션)
+        private static readonly int[] HiddenByCat = new int[9];
+        private static int _debugLines;
 
         public static bool Busy => _phase != Phase.Idle && _phase != Phase.Done;
         public static int HiddenCount => _hidden;
@@ -83,7 +86,8 @@ namespace TYR_DeClutterer
             _cursor = 0;
             _reanalyze = false;
             _hidden = _far = 0;
-            HiddenByCat.Clear();
+            System.Array.Clear(HiddenByCat, 0, HiddenByCat.Length);
+            _debugLines = 0;
         }
 
         // 설정이 바뀌면 처음부터 다시 적용(필요하면 다시 검사).
@@ -114,15 +118,15 @@ namespace TYR_DeClutterer
             switch (_phase)
             {
                 case Phase.CollectLod:
-                    foreach (var lg in Object.FindObjectsOfType<LODGroup>()) Add(lg.gameObject, Kind.Lod, lg);
+                    foreach (var lg in Object.FindObjectsByType<LODGroup>(FindObjectsSortMode.None)) Add(lg.gameObject, Kind.Lod, lg);
                     _phase = Phase.CollectDecal;
                     break;
                 case Phase.CollectDecal:
-                    foreach (var d in Object.FindObjectsOfType<StaticDeferredDecal>()) Add(d.gameObject, Kind.Decal, null);
+                    foreach (var d in Object.FindObjectsByType<StaticDeferredDecal>(FindObjectsSortMode.None)) Add(d.gameObject, Kind.Decal, null);
                     _phase = Phase.CollectParticle;
                     break;
                 case Phase.CollectParticle:
-                    foreach (var p in Object.FindObjectsOfType<ParticleSystem>()) Add(p.gameObject, Kind.Particle, null);
+                    foreach (var p in Object.FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None)) Add(p.gameObject, Kind.Particle, null);
                     _phase = Phase.Analyze;
                     _cursor = 0;
                     break;
@@ -185,7 +189,8 @@ namespace TYR_DeClutterer
         private static void ResetStats()
         {
             _hidden = _far = 0;
-            HiddenByCat.Clear();
+            System.Array.Clear(HiddenByCat, 0, HiddenByCat.Length);
+            _debugLines = 0;
         }
 
         // 2단계: 이름·컴포넌트·충돌체·크기를 본다. 이름이 안 맞으면 비싼 검사는 생략(이름 무관 옵션이 켜지면 다시).
@@ -203,6 +208,13 @@ namespace TYR_DeClutterer
             else if (e.Kind == Kind.Decal) e.Mask = e.Mask != Cat.None ? Cat.Decals : Cat.None;
             else e.Mask &= ~Cat.FireSmoke;
 
+            if (e.Kind == Kind.Decal)
+            {
+                // 데칼은 여기서 판정하지 않는다 — 맵 로드 때 DecalGate가 이미 그리기에서 뺐는지만 기록.
+                bool blocked = DecalGate.IsBlocked(e.Go.GetComponent<StaticDeferredDecal>());
+                Set(e, blocked ? Verdict.DecalAtLoad : Verdict.NoMatch, null);
+                return;
+            }
             if (ClutterRules.IsNeverName(lower, out var never)) { Set(e, Verdict.NeverName, never); return; }
             if (ClutterRules.IsUserExcluded(lower, out var ex)) { Set(e, Verdict.UserExcluded, ex); return; }
             if (e.Mask == Cat.None && !needDeep) { e.V = Verdict.NoMatch; return; }
@@ -282,12 +294,11 @@ namespace TYR_DeClutterer
         private static bool Wants(Entry e, Cat enabled, out Cat countAs)
         {
             countAs = Cat.None;
-            if (!Plugin.DeclutterActive || e.V != Verdict.Candidate || e.Go == null) return false;
+            if (!Plugin.DeclutterActive || e.V != Verdict.Candidate || e.Go == null || e.Kind == Kind.Decal) return false;
             if (e.Kind == Kind.Lod && e.Height > 2f * Settings.SizeScale.Value) return false;
             if (Settings.HideUnscrutinized.Value)
             {
                 if (e.Kind == Kind.Particle && !Settings.FireSmoke.Value) return false;
-                if (e.Kind == Kind.Decal && !Settings.Decals.Value) return false;
                 countAs = e.Mask == Cat.None ? Cat.None : First(e.Mask);
                 return true;
             }
@@ -299,14 +310,29 @@ namespace TYR_DeClutterer
 
         private static Cat First(Cat m)
         {
-            foreach (var c in ClutterRules.AllCats()) if ((m & c) != 0) return c;
+            for (int i = 0; i < 8; i++)
+            {
+                var c = (Cat)(1 << i);
+                if ((m & c) != 0) return c;
+            }
             return Cat.None;
+        }
+
+        private static int CatIndex(Cat c)
+        {
+            for (int i = 0; i < 8; i++) if (c == (Cat)(1 << i)) return i;
+            return 8;
         }
 
         // 3단계: 원하는 상태로 맞춘다(숨김 / 멀리서만 숨김 / 원래대로).
         private static void ApplyOne(Entry e)
         {
             if (e.Go == null) { e.HiddenByUs = false; return; }
+            if (e.Kind == Kind.Decal)
+            {
+                if (e.V == Verdict.DecalAtLoad) { _hidden++; HiddenByCat[CatIndex(Cat.Decals)]++; }
+                return;
+            }
             bool want = Wants(e, ClutterRules.EnabledMask(), out var cat);
             bool far = want && Settings.IsFarMode && e.Kind == Kind.Lod && e.Lod != null;
 
@@ -323,13 +349,13 @@ namespace TYR_DeClutterer
                 {
                     e.Go.SetActive(false);
                     e.HiddenByUs = true;
-                    if (Settings.DebugLog.Value) Plugin.Log.LogInfo($"[DeClutter] hide {e.Go.name} ({ClutterRules.CatName(cat)}, '{e.Keyword}')");
+                    if (Settings.DebugLog.Value && _debugLines++ < MaxDebugLines)
+                        Plugin.Log.LogInfo($"[DeClutter] hide {e.Go.name} ({ClutterRules.CatName(cat)}, '{e.Keyword}')");
                 }
                 if (e.HiddenByUs)
                 {
                     _hidden++;
-                    HiddenByCat.TryGetValue(cat, out int n);
-                    HiddenByCat[cat] = n + 1;
+                    HiddenByCat[CatIndex(cat)]++;
                 }
             }
             else if (e.HiddenByUs)
@@ -384,11 +410,15 @@ namespace TYR_DeClutterer
         {
             Total.Stop();
             var sb = new StringBuilder();
-            foreach (var kv in HiddenByCat)
+            for (int i = 0; i < HiddenByCat.Length; i++)
             {
+                if (HiddenByCat[i] == 0) continue;
                 if (sb.Length > 0) sb.Append(", ");
-                sb.Append(ClutterRules.CatName(kv.Key)).Append(' ').Append(kv.Value);
+                sb.Append(ClutterRules.CatName(i < 8 ? (Cat)(1 << i) : Cat.None)).Append(' ').Append(HiddenByCat[i]);
+                if (i == CatIndex(Cat.Decals)) sb.Append(Loc.L("(로드 때 제외)", " (at load)"));
             }
+            if (Settings.DebugLog.Value && _debugLines > MaxDebugLines)
+                Plugin.Log.LogInfo($"[DeClutter] hide ... +{_debugLines - MaxDebugLines} more (debug log capped)");
             int prot = 0, coll = 0, never = 0, user = 0;
             foreach (var e in Entries)
             {
@@ -459,6 +489,7 @@ namespace TYR_DeClutterer
                 case Verdict.HasCollider: return Loc.L($"충돌체 있음({e.Detail}) — 총알·발소리·봇 판단 유지", $"has collider ({e.Detail}) — kept for bullets/footsteps/AI");
                 case Verdict.NoMesh: return Loc.L("보이는 메시 없음", "no visible mesh");
                 case Verdict.Gone: return Loc.L("이미 사라진 물체", "object destroyed");
+                case Verdict.DecalAtLoad: return Loc.L("맵 로드 때 그리기에서 뺀 데칼(데칼은 레이드 단위 — 바꾸면 다음 레이드부터)", "decal excluded from drawing at map load (decals are per-raid; changes apply next raid)");
                 case Verdict.Candidate:
                     if (e.Kind == Kind.Lod && e.Height > 2f * Settings.SizeScale.Value) return Loc.L("크기가 커서 유지(숨길 크기 배율)", "too big (size scale)");
                     if (!Plugin.DeclutterActive) return Loc.L("잡동사니 숨기기 꺼짐", "DeClutter is off");

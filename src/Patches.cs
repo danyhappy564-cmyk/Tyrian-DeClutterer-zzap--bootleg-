@@ -20,6 +20,14 @@ namespace TYR_DeClutterer
             Try(h, "Physics (fixed)", AccessTools.Method(typeof(PhysicsExtensions.Simulation), nameof(PhysicsExtensions.Simulation.FixedUpdate)), prefix: nameof(PhysicsFixedUpdatePrefix));
             Try(h, "Sky", AccessTools.Method(typeof(TOD_Sky), "LateUpdate"), prefix: nameof(WeatherPrefix));
             Try(h, "Weather", AccessTools.Method(typeof(WeatherController), "LateUpdate"), prefix: nameof(WeatherPrefix));
+            Try(h, "Map decals", AccessTools.Method(typeof(StaticDeferredDecalRenderer), nameof(StaticDeferredDecalRenderer.AddDecal)), prefix: nameof(DecalAddPrefix));
+        }
+
+        // ── 맵 데칼: 로드 때 그리기 목록에 안 넣기 (DecalGate 설명 참고) ─────
+        private static bool DecalAddPrefix(StaticDeferredDecal decal)
+        {
+            try { return !DecalGate.ShouldBlock(decal); }
+            catch { return true; }
         }
 
         private static void Try(Harmony h, string name, MethodInfo target, string prefix = null, string postfix = null)

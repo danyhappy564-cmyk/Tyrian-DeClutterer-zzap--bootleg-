@@ -118,9 +118,9 @@ namespace TYR_DeClutterer
                 "Language", "Language of this F12 page. Close and reopen the F12 window to apply.",
                 new AcceptableValueList<string>(LangKo, LangEn));
             Preset = Bind(cfg, SecGeneral, "Preset", PresetCustom,
-                "프리셋 (한 번에 설정)", "고르면 아래 2·3번 항목을 한꺼번에 맞춘 뒤 '직접 설정'으로 돌아옵니다. 그 뒤 항목을 하나씩 바꿔도 됩니다. 4번(실험적)은 건드리지 않습니다.\n" +
+                "프리셋 (한 번에 설정)", "고르면 아래 2·3번 항목을 한꺼번에 맞춥니다. 그 뒤 2·3번 항목을 직접 바꾸면 '직접 설정'으로 바뀝니다. 4번(실험적)은 건드리지 않습니다.\n" +
                 "가벼움: 잡동사니를 멀리서만 숨김 + 탄피 개수 제한\n균형: 잡동사니 완전히 숨김 + 부드러운 파티클·풀·실시간 반사 끔 + 총알 자국 줄임\n최대: 균형 + 그림자 단순화·조명 수·LOD 낮춤",
-                "Preset", "Picking one sets sections 2 and 3 at once, then this returns to 'Custom'. You can still fine-tune each item afterwards. Section 4 (experimental) is never touched.\n" +
+                "Preset", "Picking one sets sections 2 and 3 at once. Changing any item in sections 2/3 afterwards switches this to 'Custom'. Section 4 (experimental) is never touched.\n" +
                 "Light: hide clutter only at distance + shell cap\nBalanced: hide clutter completely + soft particles/vegetation/realtime reflections off + fewer bullet decals\nMax: Balanced + simpler shadows, fewer pixel lights, lower LOD",
                 new AcceptableValueList<string>(PresetCustom, PresetOff, PresetLight, PresetBalanced, PresetMax));
             ToggleKey = Bind(cfg, SecGeneral, "Toggle Key", KeyboardShortcut.Empty,
@@ -164,7 +164,7 @@ namespace TYR_DeClutterer
             FakeFood = Bind(cfg, SecDeclutter, "Fake Food", true,
                 "가짜 음식·병·캔", "주울 수 없는 장식용 캔, 병, 과자, 담배, 컵.", "Fake food", "Non-lootable decorative cans, bottles, snacks, cigarettes, cups.");
             Decals = Bind(cfg, SecDeclutter, "Decals", true,
-                "맵 데칼 (핏자국·낙서·얼룩)", "맵에 미리 그려진 핏자국, 낙서, 흙 얼룩.", "Map decals", "Pre-placed blood, graffiti and dirt decals.");
+                "맵 데칼 (핏자국·낙서·얼룩)", "맵에 미리 그려진 핏자국, 낙서, 흙 얼룩. 맵을 불러올 때 그리기에서 빼는 방식이라 레이드 중에 바꾸면 다음 레이드부터 적용되고, 켜기/끄기 키·효과 측정에도 영향받지 않습니다.", "Map decals", "Pre-placed blood, graffiti and dirt decals. They are excluded from drawing while the map loads, so changes apply from the next raid and the toggle/benchmark keys do not affect them.");
             Puddles = Bind(cfg, SecDeclutter, "Puddles", true,
                 "가짜 물웅덩이", "반사만 하는 장식용 웅덩이(소리 나는 웅덩이는 충돌체가 있어 안 숨김).", "Puddles", "Decorative reflective puddles (puddles with a sound trigger have colliders and are kept).");
             Shards = Bind(cfg, SecDeclutter, "Shards", true,

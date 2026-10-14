@@ -122,6 +122,7 @@ namespace TYR_DeClutterer
             _lateRetryAt = -1f;
             Benchmark.Cancel();
             ClutterScanner.Clear();
+            DecalGate.Reset();
             GraphicsTweaks.EndRaid();
             WorldTweaks.EndRaid();
         }
@@ -151,21 +152,31 @@ namespace TYR_DeClutterer
 
             if (entry == Settings.Preset)
             {
+                // 고른 프리셋 이름은 그대로 남긴다. 그 뒤 항목을 직접 바꾸면 '직접 설정'으로 바뀐다(아래).
                 if (_applyingPreset || Settings.Preset.Value == Settings.PresetCustom) return;
                 _applyingPreset = true;
-                try
-                {
-                    Settings.ApplyPreset(Settings.Preset.Value);
-                    Settings.Preset.Value = Settings.PresetCustom;
-                }
+                try { Settings.ApplyPreset(Settings.Preset.Value); }
                 finally { _applyingPreset = false; }
                 RefreshAll(true);
-                Notifier.Show(Loc.L("프리셋을 적용했습니다", "Preset applied"));
+                Notifier.Show(Loc.L("프리셋을 적용했습니다: ", "Preset applied: ") + Settings.Preset.Value);
                 return;
             }
-            if (_applyingPreset || !InRaid) return;
+            if (_applyingPreset) return;
 
             string section = entry.Definition.Section;
+            if ((section == Settings.SecDeclutter || section == Settings.SecFramesaver) && entry != Settings.ScanBudgetMs
+                && Settings.Preset.Value != Settings.PresetCustom)
+            {
+                _applyingPreset = true;
+                try { Settings.Preset.Value = Settings.PresetCustom; }
+                finally { _applyingPreset = false; }
+            }
+            if (!InRaid) return;
+
+            // 맵 데칼은 로드 때 정해진다(DecalGate) → 레이드 중 변경은 다음 레이드부터.
+            if (entry == Settings.Decals || (entry == Settings.HideUnscrutinized && Settings.Decals.Value))
+                Notifier.Show(Loc.L("데칼 설정은 다음 레이드부터 적용됩니다", "Decal changes apply from the next raid"), 4f);
+
             if (section == Settings.SecDeclutter)
             {
                 ClutterScanner.MarkDirty(false);
