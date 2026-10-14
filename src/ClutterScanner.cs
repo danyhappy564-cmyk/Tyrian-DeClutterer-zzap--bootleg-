@@ -68,6 +68,7 @@ namespace TYR_DeClutterer
         // 분류별 숨김 수. Dictionary<enum,int>는 Mono에서 조회마다 박싱이 생겨 배열로 둔다. [8] = 기타(이름 무관 옵션)
         private static readonly int[] HiddenByCat = new int[9];
         private static int _debugLines;
+        private static int _decalsAtLoad; // 맵 데칼(로드 때 그리기에서 뺌). 이름에 decal이 든 일반 물체는 HiddenByCat[데칼]로 따로.
 
         public static bool Busy => _phase != Phase.Idle && _phase != Phase.Done;
         public static int HiddenCount => _hidden;
@@ -96,6 +97,7 @@ namespace TYR_DeClutterer
             _hidden = _far = 0;
             System.Array.Clear(HiddenByCat, 0, HiddenByCat.Length);
             _debugLines = 0;
+            _decalsAtLoad = 0;
         }
 
         // 설정이 바뀌면 처음부터 다시 적용(필요하면 다시 검사).
@@ -214,6 +216,7 @@ namespace TYR_DeClutterer
             _hidden = _far = 0;
             System.Array.Clear(HiddenByCat, 0, HiddenByCat.Length);
             _debugLines = 0;
+            _decalsAtLoad = 0;
         }
 
         // 2단계: 이름·컴포넌트·충돌체·크기를 본다. 이름이 안 맞으면 비싼 검사는 생략(이름 무관 옵션이 켜지면 다시).
@@ -353,7 +356,7 @@ namespace TYR_DeClutterer
             if (e.Go == null) { e.HiddenByUs = false; return; }
             if (e.Kind == Kind.Decal)
             {
-                if (e.V == Verdict.DecalAtLoad) { _hidden++; HiddenByCat[CatIndex(Cat.Decals)]++; }
+                if (e.V == Verdict.DecalAtLoad) { _hidden++; _decalsAtLoad++; }
                 return;
             }
             bool want = Wants(e, ClutterRules.EnabledMask(), out var cat);
@@ -438,7 +441,11 @@ namespace TYR_DeClutterer
                 if (HiddenByCat[i] == 0) continue;
                 if (sb.Length > 0) sb.Append(", ");
                 sb.Append(ClutterRules.CatName(i < 8 ? (Cat)(1 << i) : Cat.None)).Append(' ').Append(HiddenByCat[i]);
-                if (i == CatIndex(Cat.Decals)) sb.Append(Loc.L("(로드 때 제외)", " (at load)"));
+            }
+            if (_decalsAtLoad > 0)
+            {
+                if (sb.Length > 0) sb.Append(", ");
+                sb.Append(Loc.L("맵 데칼(로드 때 제외) ", "map decals (at load) ")).Append(_decalsAtLoad);
             }
             if (Settings.DebugLog.Value && _debugLines > MaxDebugLines)
                 Plugin.Log.LogInfo($"[DeClutter] hide ... +{_debugLines - MaxDebugLines} more (debug log capped)");
