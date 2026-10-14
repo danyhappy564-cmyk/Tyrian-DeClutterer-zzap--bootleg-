@@ -4,6 +4,7 @@ using System.Text;
 using EFT.CameraControl;
 using EFT.Interactive;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace TYR_DeClutterer
 {
@@ -35,7 +36,7 @@ namespace TYR_DeClutterer
     // 한 프레임에 쓰는 시간은 Settings.ScanBudgetMs, 처리 개수도 상한이 있어 멈춤이 생기지 않게 한다.
     internal static class ClutterScanner
     {
-        private enum Phase { Idle, CollectLod, CollectDecal, CollectParticle, Analyze, Apply, Done }
+        private enum Phase { Idle, CollectRoots, CollectWalk, Analyze, Apply, Done }
 
         private const int MaxItemsPerFrame = 4000;
         private const int MaxDebugLines = 300; // 자세한 로그도 한 번 적용에 이만큼만(레이드 중 GC가 꺼져 문자열이 쌓임)
@@ -47,6 +48,12 @@ namespace TYR_DeClutterer
         private static readonly Stopwatch Total = new Stopwatch();
         private static readonly List<Component> CompBuf = new List<Component>();
         private static readonly List<Renderer> RendBuf = new List<Renderer>();
+        // 수집도 씬 루트 단위로 나눠서(한 번에 FindObjectsByType 하면 Streets 15만 개에서 한 프레임 92ms였음).
+        private static readonly List<GameObject> Roots = new List<GameObject>();
+        private static readonly List<GameObject> RootBuf = new List<GameObject>();
+        private static readonly List<LODGroup> LodBuf = new List<LODGroup>();
+        private static readonly List<StaticDeferredDecal> DecalBuf = new List<StaticDeferredDecal>();
+        private static readonly List<ParticleSystem> ParticleBuf = new List<ParticleSystem>();
 
         private static Phase _phase = Phase.Idle;
         private static int _cursor;
@@ -70,7 +77,7 @@ namespace TYR_DeClutterer
         {
             Clear();
             _mapId = mapId;
-            _phase = Phase.CollectLod;
+            _phase = Phase.CollectRoots;
             _frames = 0;
             _maxFrameMs = 0;
             _firstPassLogged = false;
@@ -82,6 +89,7 @@ namespace TYR_DeClutterer
         {
             Entries.Clear();
             Seen.Clear();
+            Roots.Clear();
             _phase = Phase.Idle;
             _cursor = 0;
             _reanalyze = false;
@@ -94,7 +102,7 @@ namespace TYR_DeClutterer
         public static void MarkDirty(bool reanalyze)
         {
             if (_phase == Phase.Idle) return;
-            if (_phase == Phase.CollectLod || _phase == Phase.CollectDecal || _phase == Phase.CollectParticle) return;
+            if (_phase == Phase.CollectRoots || _phase == Phase.CollectWalk) return;
             if (reanalyze) _reanalyze = true;
             if (_phase == Phase.Analyze)
             {
@@ -105,6 +113,11 @@ namespace TYR_DeClutterer
             _phase = _reanalyze ? Phase.Analyze : Phase.Apply;
             _cursor = 0;
             ResetStats();
+            // 이번 적용 한 번의 시간·프레임만 요약에 남게 새로 잰다.
+            _frames = 0;
+            _maxFrameMs = 0;
+            Total.Reset();
+            Total.Start();
         }
 
         public static void Tick()
@@ -117,18 +130,43 @@ namespace TYR_DeClutterer
 
             switch (_phase)
             {
-                case Phase.CollectLod:
-                    foreach (var lg in Object.FindObjectsByType<LODGroup>(FindObjectsSortMode.None)) Add(lg.gameObject, Kind.Lod, lg);
-                    _phase = Phase.CollectDecal;
-                    break;
-                case Phase.CollectDecal:
-                    foreach (var d in Object.FindObjectsByType<StaticDeferredDecal>(FindObjectsSortMode.None)) Add(d.gameObject, Kind.Decal, null);
-                    _phase = Phase.CollectParticle;
-                    break;
-                case Phase.CollectParticle:
-                    foreach (var p in Object.FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None)) Add(p.gameObject, Kind.Particle, null);
-                    _phase = Phase.Analyze;
+                case Phase.CollectRoots:
+                    Roots.Clear();
+                    for (int i = 0; i < SceneManager.sceneCount; i++)
+                    {
+                        var scene = SceneManager.GetSceneAt(i);
+                        if (!scene.isLoaded) continue;
+                        RootBuf.Clear();
+                        scene.GetRootGameObjects(RootBuf);
+                        Roots.AddRange(RootBuf);
+                    }
+                    _phase = Phase.CollectWalk;
                     _cursor = 0;
+                    break;
+                case Phase.CollectWalk:
+                    // 켜진 것만(FindObjectsOfType와 같은 기준). 루트 하나가 아주 크면 그 프레임만 조금 길어진다.
+                    while (_cursor < Roots.Count && processed < MaxItemsPerFrame && Sw.Elapsed.TotalMilliseconds < budget)
+                    {
+                        var root = Roots[_cursor];
+                        _cursor++;
+                        processed++;
+                        if (root == null || !root.activeInHierarchy) continue;
+                        root.GetComponentsInChildren(false, LodBuf);
+                        foreach (var lg in LodBuf) Add(lg.gameObject, Kind.Lod, lg);
+                        root.GetComponentsInChildren(false, DecalBuf);
+                        foreach (var d in DecalBuf) Add(d.gameObject, Kind.Decal, null);
+                        root.GetComponentsInChildren(false, ParticleBuf);
+                        foreach (var p in ParticleBuf) Add(p.gameObject, Kind.Particle, null);
+                    }
+                    if (_cursor >= Roots.Count)
+                    {
+                        Roots.Clear();
+                        LodBuf.Clear();
+                        DecalBuf.Clear();
+                        ParticleBuf.Clear();
+                        _phase = Phase.Analyze;
+                        _cursor = 0;
+                    }
                     break;
                 case Phase.Analyze:
                     while (_cursor < Entries.Count && processed < MaxItemsPerFrame && Sw.Elapsed.TotalMilliseconds < budget)
@@ -163,21 +201,6 @@ namespace TYR_DeClutterer
             Sw.Stop();
             _frames++;
             if (Sw.Elapsed.TotalMilliseconds > _maxFrameMs) _maxFrameMs = Sw.Elapsed.TotalMilliseconds;
-        }
-
-        // 잠시 끄기(토글 키·측정·모드 끔): 숨긴 것을 전부 즉시 되돌린다.
-        public static void RestoreAll()
-        {
-            foreach (var e in Entries)
-            {
-                RestoreLod(e);
-                if (e.HiddenByUs)
-                {
-                    if (e.Go != null) e.Go.SetActive(true);
-                    e.HiddenByUs = false;
-                }
-            }
-            ResetStats();
         }
 
         private static void Add(GameObject go, Kind kind, LODGroup lod)

@@ -139,8 +139,8 @@ namespace TYR_DeClutterer
         {
             if (!InRaid || Suspended == value) return;
             Suspended = value;
-            if (Suspended) ClutterScanner.RestoreAll();
-            else ClutterScanner.MarkDirty(false);
+            // 끌 때도 켤 때처럼 여러 프레임에 나눠 되돌린다(한 프레임에 1만여 개를 되살리면 40ms 끊김이었음).
+            ClutterScanner.MarkDirty(false);
             GraphicsTweaks.Apply();
             try { WorldTweaks.ApplyGrass(); WorldTweaks.ApplyReflections(); } catch (Exception e) { Log.LogWarning("[DeClutter] " + e.Message); }
         }
@@ -247,6 +247,7 @@ namespace TYR_DeClutterer
         private static float _time;
         private static float _fpsOn, _fpsOff;
         private static bool _wasSuspended;
+        private static int _hiddenOn, _farOn;
 
         public static bool Running => _step != Step.Idle;
 
@@ -256,7 +257,7 @@ namespace TYR_DeClutterer
             _wasSuspended = Plugin.Suspended;
             Plugin.SetSuspended(false);
             Go(Step.SettleOn);
-            Notifier.Show(Loc.L("효과 측정 시작 — 약 13초 동안 가만히 있어 주세요", "Benchmark started — stand still for ~13 s"), 4f);
+            Notifier.Show(Loc.L("효과 측정 시작 — 약 15~20초 동안 가만히 있어 주세요", "Benchmark started — stand still for ~15-20 s"), 4f);
         }
 
         public static void Cancel()
@@ -280,12 +281,16 @@ namespace TYR_DeClutterer
                     if (elapsed >= Measure)
                     {
                         _fpsOn = _frames / Mathf.Max(0.001f, _time);
+                        // 집계는 끄는 순간 0으로 바뀌므로 켠 상태 값을 여기서 저장.
+                        _hiddenOn = ClutterScanner.HiddenCount;
+                        _farOn = ClutterScanner.FarCount;
                         Plugin.SetSuspended(true);
                         Go(Step.SettleOff);
                     }
                     break;
                 case Step.SettleOff:
-                    if (elapsed >= Settle) Go(Step.MeasureOff);
+                    if (elapsed >= Settle && !ClutterScanner.Busy) Go(Step.MeasureOff);
+                    else if (elapsed > 60f) { Plugin.SetSuspended(_wasSuspended); Cancel(); Notifier.Show(Loc.L("측정 취소: 되돌리기가 끝나지 않음", "Benchmark cancelled: restore not finished")); }
                     break;
                 case Step.MeasureOff:
                     Accumulate();
@@ -318,8 +323,8 @@ namespace TYR_DeClutterer
         {
             float diff = _fpsOff > 0f ? (_fpsOn - _fpsOff) / _fpsOff * 100f : 0f;
             string msg = Loc.L(
-                $"효과 측정: 켬 {_fpsOn:0.0} FPS ({1000f / Mathf.Max(0.1f, _fpsOn):0.0}ms) / 끔 {_fpsOff:0.0} FPS ({1000f / Mathf.Max(0.1f, _fpsOff):0.0}ms) → {diff:+0.0;-0.0}% (숨김 {ClutterScanner.HiddenCount}, 멀리서만 {ClutterScanner.FarCount})",
-                $"Benchmark: on {_fpsOn:0.0} FPS ({1000f / Mathf.Max(0.1f, _fpsOn):0.0} ms) / off {_fpsOff:0.0} FPS ({1000f / Mathf.Max(0.1f, _fpsOff):0.0} ms) → {diff:+0.0;-0.0}% (hidden {ClutterScanner.HiddenCount}, far-only {ClutterScanner.FarCount})");
+                $"효과 측정: 켬 {_fpsOn:0.0} FPS ({1000f / Mathf.Max(0.1f, _fpsOn):0.0}ms) / 끔 {_fpsOff:0.0} FPS ({1000f / Mathf.Max(0.1f, _fpsOff):0.0}ms) → {diff:+0.0;-0.0}% (숨김 {_hiddenOn}, 멀리서만 {_farOn}, 데칼은 양쪽 다 숨김)",
+                $"Benchmark: on {_fpsOn:0.0} FPS ({1000f / Mathf.Max(0.1f, _fpsOn):0.0} ms) / off {_fpsOff:0.0} FPS ({1000f / Mathf.Max(0.1f, _fpsOff):0.0} ms) → {diff:+0.0;-0.0}% (hidden {_hiddenOn}, far-only {_farOn}, decals hidden in both)");
             Plugin.Log.LogInfo("[DeClutter] " + msg);
             Notifier.Show(msg, 8f);
         }

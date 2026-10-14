@@ -127,8 +127,8 @@ namespace TYR_DeClutterer
                 "레이드 중 켜기/끄기 키", "누를 때마다 이 모드 전체를 잠시 끄고 켭니다(설정 파일은 안 바뀜). 같은 자리에서 FPS를 비교할 때 쓰세요. 기본은 키 없음.",
                 "In-raid on/off key", "Temporarily turns the whole mod off/on (does not change the config). Handy for comparing FPS on the spot. No key by default.");
             BenchmarkKey = Bind(cfg, SecGeneral, "Benchmark Key", KeyboardShortcut.Empty,
-                "효과 측정 키", "누르면 약 13초 동안 켠 상태 5초 → 끈 상태 5초 평균 FPS를 재서 화면과 로그에 알려 줍니다. 측정 중엔 가만히 서 있으세요.",
-                "Benchmark key", "Measures average FPS for 5 s with the mod on and 5 s with it off (~13 s total), then shows the result on screen and in the log. Stand still while it runs.");
+                "효과 측정 키", "누르면 약 15~20초 동안 켠 상태 5초 → 끈 상태 5초 평균 FPS를 재서 화면과 로그에 알려 줍니다. 측정 중엔 가만히 서 있으세요. FPS 제한(프레임 상한·수직동기·프레임 생성용 상한)이 걸려 있으면 차이가 안 보이니 측정할 때만 풀어 주세요. 맵 데칼은 양쪽 다 숨긴 채로 잽니다.",
+                "Benchmark key", "Measures average FPS for 5 s with the mod on and 5 s with it off (~15-20 s total), then shows the result on screen and in the log. Stand still while it runs. A frame cap (FPS limit, V-Sync, frame-generation cap) hides any difference — lift it while measuring. Map decals stay hidden in both runs.");
             InspectKey = Bind(cfg, SecGeneral, "Inspect Key", KeyboardShortcut.Empty,
                 "물체 이름 확인 키", "화면 가운데에 가장 가까운 장식 물체의 이름, 숨겨졌는지, 왜 그런지를 로그에 남깁니다. 숨기면 안 되는 물체를 exclude.txt에 넣을 때 쓰세요.",
                 "Inspect key", "Logs the decoration object closest to the screen centre: its name, whether it is hidden and why. Use it to add entries to exclude.txt.");
