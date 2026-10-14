@@ -210,8 +210,8 @@ namespace TYR_DeClutterer
                 "Shell cap", "0 = no limit. When ejected casings exceed this, the oldest are removed (instead of disabling them like the original). Helps in big firefights.",
                 new AcceptableValueRange<int>(0, 300));
             DecalMaxStatic = Bind(cfg, SecFramesaver, "Bullet Decal Max", 0,
-                "총알 자국 최대 개수", "0 = 게임 기본(보통 500). 벽·바닥의 총알 자국과 피 자국을 이 개수까지만 남깁니다. 레이드 시작 때 적용.",
-                "Bullet decal max", "0 = game default (usually 500). Keeps at most this many bullet holes/blood splats on surfaces. Applied at raid start.",
+                "총알 자국 최대 개수", "0 = 게임 기본(보통 500, HollywoodFX가 있으면 그 설정값). 벽·바닥의 총알 자국과 피 자국을 이 개수까지만 남깁니다. 줄이는 쪽으로만 바뀝니다. 레이드 시작 때 적용.",
+                "Bullet decal max", "0 = game default (usually 500, or HollywoodFX's value). Keeps at most this many bullet holes/blood splats on surfaces. Only ever lowers the limit. Applied at raid start.",
                 new AcceptableValueRange<int>(0, 500));
             DecalMaxDynamic = Bind(cfg, SecFramesaver, "Dynamic Decal Max", 0,
                 "움직이는 물체 총알 자국 최대", "0 = 게임 기본. 움직이는 물체에 남는 자국 개수.", "Dynamic decal max", "0 = game default. Decals on moving objects.",
@@ -222,8 +222,8 @@ namespace TYR_DeClutterer
 
             // ── 4. 실험적 ───────────────────────────────────────────
             PhysicsHalfRate = Bind(cfg, SecExperimental, "Physics Half Rate", false,
-                "물리 계산 절반", "물리(시체·던진 수류탄·떨어진 물건)를 두 프레임에 한 번, 두 배 시간으로 계산합니다. 원본은 물리가 슬로모션이 되는 문제가 있어 고쳤습니다. 수류탄 궤적·시체 움직임이 살짝 거칠어질 수 있습니다.",
-                "Physics half rate", "Simulates physics (corpses, thrown grenades, dropped items) every other frame with double time step. The original made physics run in slow motion; fixed. Grenade arcs and ragdolls may look slightly rougher.");
+                "물리 계산 절반", "물리(시체·던진 수류탄·떨어진 물건)를 두 프레임에 한 번, 두 배 시간으로 계산합니다. 원본은 물리가 슬로모션이 되는 문제가 있어 고쳤습니다. 수류탄 궤적·시체 움직임이 살짝 거칠어질 수 있습니다. HollywoodFX의 래그돌(시체 연출)과 같이 쓰면 시체가 튈 수 있어 권장하지 않습니다.",
+                "Physics half rate", "Simulates physics (corpses, thrown grenades, dropped items) every other frame with double time step. The original made physics run in slow motion; fixed. Grenade arcs and ragdolls may look slightly rougher. Not recommended with HollywoodFX ragdolls (corpses may jitter).");
             WeatherThrottle = Bind(cfg, SecExperimental, "Weather Throttle", false,
                 "하늘·날씨 계산 격프레임", "하늘색·안개·구름 계산을 두 프레임에 한 번만 합니다. 해 그림자 방향이 조금 늦게 따라올 수 있습니다.",
                 "Sky & weather every other frame", "Updates sky colour, fog and clouds every other frame. Sun shadow direction may lag slightly.");

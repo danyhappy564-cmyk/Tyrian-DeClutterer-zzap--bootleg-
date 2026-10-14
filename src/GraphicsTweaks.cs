@@ -104,6 +104,10 @@ namespace TYR_DeClutterer
 
         public static void ApplyDecals()
         {
+            // 아무것도 안 바꾸는 설정이면 손대지 않는다(HollywoodFX가 늘려 둔 한도를 그대로 둠).
+            bool wantsChange = Settings.FramesaverEnabled.Value &&
+                (Settings.DecalMaxStatic.Value > 0 || Settings.DecalMaxDynamic.Value > 0 || Settings.DecalCullDistance.Value > 0);
+            if (_decals == null && !wantsChange) return;
             if (_decals == null)
             {
                 if (!Singleton<Systems.Effects.Effects>.Instantiated) return;
@@ -154,6 +158,8 @@ namespace TYR_DeClutterer
         public static void ApplyGrass()
         {
             int dist = Settings.GrassDistance.Value;
+            // 기본값(0)이고 아직 바꾼 적 없으면 아예 손대지 않는다(HollywoodGraphics의 풀 거리 배율과 겹치지 않게).
+            if (dist <= 0 && GrassOrig.Count == 0) return;
             var managers = GPUInstancerManager.activeManagerList;
             if (managers == null) return;
             foreach (var m in managers)
@@ -171,6 +177,7 @@ namespace TYR_DeClutterer
         public static void ApplyReflections()
         {
             float delay = Settings.ReflectionDelay.Value;
+            if (delay <= 0f && ReflectionOrig.Count == 0) return;
             if (ReflectionOrig.Count == 0)
             {
                 foreach (var a in Object.FindObjectsOfType<AmbientLight>()) ReflectionOrig[a] = a.RenderDelay;

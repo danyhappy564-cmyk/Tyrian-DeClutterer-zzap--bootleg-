@@ -4,6 +4,7 @@ using System.IO;
 using EFT;
 using EFT.AssetsManager;
 using EFT.Ballistics;
+using EFT.Game.Spawning;
 using EFT.Interactive;
 using Koenigz.PerfectCulling.EFT;
 using UnityEngine;
@@ -156,7 +157,9 @@ namespace TYR_DeClutterer
         // 이 컴포넌트가 하위에 있으면 숨기지 않는다: 루팅·퀘스트·상호작용·봇·컬링·소리·조명 등.
         public static bool IsProtectedComponent(Component c)
         {
-            return c is LootableContainer || c is LootableContainersGroup || c is LootItem || c is WeaponModPoolObject
+            // AssetPoolObject = 게임·HollywoodFX의 오브젝트 풀(탄피·무기·아이템), BorderZone·SpawnPointMarker = ORBIT 등이 레이드 시작 때 찾는 것.
+            return c is LootableContainer || c is LootableContainersGroup || c is LootItem || c is AssetPoolObject
+                || c is BorderZone || c is SpawnPointMarker
                 || c is RainCondensator || c is Player || c is BotOwner
                 || c is CullingObject || c is CullingLightObject || c is DisablerCullingObject || c is ObservedCullingManager
                 || c is PerfectCullingCrossSceneGroup || c is ScreenDistanceSwitcher || c is BakedLodContent || c is MultisceneSharedOccluder
@@ -168,8 +171,10 @@ namespace TYR_DeClutterer
         // 부모 쪽에 있으면 안 숨기는 것(상호작용 물체의 일부일 수 있음).
         public static bool IsProtectedParent(Component c)
         {
-            return c is WorldInteractiveObject || c is LootItem || c is LootableContainer || c is Player
-                || c is TriggerWithId || c is ExfiltrationPoint || c is DamageTrigger || c is StationaryWeapon;
+            // Systems.Effects.Effects 아래 = 게임 기본 이펙트 + HollywoodFX가 미리 만들어 붙여 둔 이펙트 풀.
+            return c is WorldInteractiveObject || c is LootItem || c is LootableContainer || c is Player || c is AssetPoolObject
+                || c is TriggerWithId || c is ExfiltrationPoint || c is DamageTrigger || c is StationaryWeapon
+                || c is Systems.Effects.Effects;
         }
     }
 }

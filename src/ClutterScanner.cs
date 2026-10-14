@@ -208,6 +208,14 @@ namespace TYR_DeClutterer
             if (e.Mask == Cat.None && !needDeep) { e.V = Verdict.NoMatch; return; }
 
             e.Deep = true;
+            // 레이드 중에 만들어져 '살아남는' 오브젝트(DontDestroyOnLoad)는 맵 장식이 아니다(다른 모드의 풀·UI 등).
+            if (e.Go.scene.name == "DontDestroyOnLoad") { Set(e, Verdict.Protected, "DontDestroyOnLoad"); return; }
+            if (e.Kind == Kind.Particle)
+            {
+                // 맵에 깔린 불·연기는 시작부터 반복 재생 중이다. 멈춰 있는 것은 이펙트 풀(게임·HollywoodFX)이라 손대지 않는다.
+                var ps = e.Go.GetComponent<ParticleSystem>();
+                if (ps == null || !ps.main.loop || !ps.isPlaying) { Set(e, Verdict.Protected, "EffectPool"); return; }
+            }
             // 하위(꺼진 것 포함)에 보호 컴포넌트나 충돌체가 하나라도 있으면 안 숨김 — 총알·발소리·봇 판단에 영향 없게.
             CompBuf.Clear();
             e.Go.GetComponentsInChildren(true, CompBuf);
