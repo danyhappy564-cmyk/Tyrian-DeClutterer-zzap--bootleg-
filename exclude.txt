@@ -1,0 +1,16 @@
+# TYR DeClutterer — 숨기지 않을 물체 목록 / Exclude list
+#
+# 한 줄에 하나씩, 물체 이름의 일부(대소문자 무시)를 적으면 그 이름이 들어간 물체는 숨기지 않습니다.
+# 특정 맵에서만 빼고 싶으면 "맵ID:이름조각" 으로 적습니다.
+# 레이드가 시작될 때마다 다시 읽으므로 게임을 끄지 않고 고쳐도 됩니다(다음 레이드부터 적용).
+# 물체 이름은 F12의 "물체 이름 확인 키"로 화면 가운데 물체를 확인하면 로그(BepInEx/LogOutput.log)에 나옵니다.
+#
+# One entry per line: part of an object name (case-insensitive) that must never be hidden.
+# Use "mapId:namePart" to exclude only on one map. Re-read at every raid start.
+#
+# 맵 ID 예시 / Map IDs: factory4_day, factory4_night, bigmap(세관 Customs), woods, shoreline, interchange,
+#                         rezervbase(리저브), laboratory, lighthouse, tarkovstreets, sandbox(그라운드 제로), sandbox_high
+#
+# 예시 / Examples:
+# poster1
+# woods:sticks

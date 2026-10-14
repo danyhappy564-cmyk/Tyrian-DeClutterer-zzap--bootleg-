@@ -1,50 +1,63 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- SPT 설치 경로: LocalSettings.props(있으면) > SPT_ROOT 환경변수 > 기본값 E:\SPT 4.1 -->
+  <Import Project="$(MSBuildThisFileDirectory)LocalSettings.props" Condition="Exists('$(MSBuildThisFileDirectory)LocalSettings.props')" />
+
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>TYR_DeClutterer</AssemblyName>
+    <RootNamespace>TYR_DeClutterer</RootNamespace>
+    <Version>2.0.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <DebugType>none</DebugType>
+    <SptRoot Condition="'$(SptRoot)' == '' And '$(SPT_ROOT)' != ''">$(SPT_ROOT)</SptRoot>
+    <SptRoot Condition="'$(SptRoot)' == ''">E:\SPT 4.1</SptRoot>
+    <ManagedDir>$(SptRoot)\EscapeFromTarkov_Data\Managed</ManagedDir>
+    <BepInExCore>$(SptRoot)\BepInEx\core</BepInExCore>
+    <!-- 빌드 후 게임 폴더로 복사할지 (컨테이너 검증 빌드에서는 false) -->
+    <DeployToGame Condition="'$(DeployToGame)' == ''">true</DeployToGame>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Tyrian-DeClutterer\**" />
-    <EmbeddedResource Remove="Tyrian-DeClutterer\**" />
-    <None Remove="Tyrian-DeClutterer\**" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>dependencies\0Harmony.dll</HintPath>
-    </Reference>
-    <Reference Include="Aki.Reflection">
-      <HintPath>..\..\..\Shared\Aki.Reflection.dll</HintPath>
-    </Reference>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\Shared\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="BepInEx">
-      <HintPath>..\..\..\Shared\BepInEx.dll</HintPath>
-    </Reference>
-    <Reference Include="BepInEx.Harmony">
-      <HintPath>dependencies\BepInEx.Harmony.dll</HintPath>
-    </Reference>
-    <Reference Include="Comfort">
-      <HintPath>..\..\..\Shared\Comfort.dll</HintPath>
-    </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\Shared\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>..\..\..\Shared\UnityEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>..\..\..\Shared\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-	  <Reference Include="UnityEngine.ParticleSystemModule">
-		  <HintPath>..\..\..\Shared\UnityEngine.ParticleSystemModule.dll</HintPath>
-	  </Reference>
-	  <Reference Include="UnityEngine.PhysicsModule">
-		  <HintPath>..\..\..\Shared\UnityEngine.PhysicsModule.dll</HintPath>
-	  </Reference>
+    <Reference Include="BepInEx" HintPath="$(BepInExCore)\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(BepInExCore)\0Harmony.dll" Private="false" />
+    <Reference Include="Assembly-CSharp" HintPath="$(ManagedDir)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="Comfort" HintPath="$(ManagedDir)\Comfort.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(ManagedDir)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedDir)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.PhysicsModule" HintPath="$(ManagedDir)\UnityEngine.PhysicsModule.dll" Private="false" />
+    <Reference Include="UnityEngine.ParticleSystemModule" HintPath="$(ManagedDir)\UnityEngine.ParticleSystemModule.dll" Private="false" />
+    <Reference Include="UnityEngine.IMGUIModule" HintPath="$(ManagedDir)\UnityEngine.IMGUIModule.dll" Private="false" />
+    <Reference Include="UnityEngine.TextRenderingModule" HintPath="$(ManagedDir)\UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="UnityEngine.AudioModule" HintPath="$(ManagedDir)\UnityEngine.AudioModule.dll" Private="false" />
+    <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(ManagedDir)\UnityEngine.InputLegacyModule.dll" Private="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="exclude.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- 게임 폴더(BepInEx\plugins\TYR_DeClutterer)로 복사 + 배포용 zip 생성 -->
+  <Target Name="DeployAndZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <StageDir>$(MSBuildThisFileDirectory)dist\stage</StageDir>
+      <PluginStage>$(StageDir)\BepInEx\plugins\TYR_DeClutterer</PluginStage>
+      <ZipPath>$(MSBuildThisFileDirectory)dist\TYR_DeClutterer-$(Version).zip</ZipPath>
+    </PropertyGroup>
+    <RemoveDir Directories="$(StageDir)" />
+    <Copy SourceFiles="$(TargetPath);$(OutDir)exclude.txt" DestinationFolder="$(PluginStage)" />
+    <Delete Files="$(ZipPath)" />
+    <ZipDirectory SourceDirectory="$(StageDir)" DestinationFile="$(ZipPath)" Overwrite="true" />
+    <Copy Condition="'$(DeployToGame)' == 'true' And Exists('$(SptRoot)\BepInEx\plugins')" SourceFiles="$(TargetPath)" DestinationFolder="$(SptRoot)\BepInEx\plugins\TYR_DeClutterer" />
+    <Copy Condition="'$(DeployToGame)' == 'true' And Exists('$(SptRoot)\BepInEx\plugins') And !Exists('$(SptRoot)\BepInEx\plugins\TYR_DeClutterer\exclude.txt')" SourceFiles="$(OutDir)exclude.txt" DestinationFolder="$(SptRoot)\BepInEx\plugins\TYR_DeClutterer" />
+    <Message Importance="high" Text="TYR_DeClutterer: zip → $(ZipPath)" />
+  </Target>
 
 </Project>
