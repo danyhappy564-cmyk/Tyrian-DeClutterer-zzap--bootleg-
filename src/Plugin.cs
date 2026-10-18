@@ -11,7 +11,7 @@ using UnityEngine;
 namespace TYR_DeClutterer
 {
     // GUID는 원본과 같게 둔다 → 원본 dll과 같이 깔려도 하나만 로드된다.
-    [BepInPlugin("com.TYR.DeClutter", "TYR_DeClutter", "2.0.0")]
+    [BepInPlugin("com.TYR.DeClutter", "TYR_DeClutter", "2.1.0")]
     public class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource Log;
@@ -37,7 +37,7 @@ namespace TYR_DeClutterer
             Settings.Init(Config);
             Config.SettingChanged += OnSettingChanged;
             Patches.ApplyAll(new Harmony("com.TYR.DeClutter"));
-            Log.LogInfo("TYR DeClutterer 2.0.0 loaded");
+            Log.LogInfo("TYR DeClutterer 2.1.0 loaded");
         }
 
         private void Update()
@@ -66,6 +66,7 @@ namespace TYR_DeClutterer
 
             ClutterScanner.Tick();
             Benchmark.Tick();
+            MaterialSort.Tick();
             if (Settings.GrassDistance.Value > 0) WorldTweaks.SetScoped(IsScopedAim(gw.MainPlayer));
 
             if (_lateRetryAt > 0f && Time.realtimeSinceStartup >= _lateRetryAt)
@@ -125,6 +126,7 @@ namespace TYR_DeClutterer
             DecalGate.Reset();
             GraphicsTweaks.EndRaid();
             WorldTweaks.EndRaid();
+            MaterialSort.Restore();
         }
 
         private static void SafeWorldApply()

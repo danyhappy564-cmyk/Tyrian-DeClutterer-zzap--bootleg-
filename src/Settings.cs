@@ -100,6 +100,8 @@ namespace TYR_DeClutterer
         public static ConfigEntry<int> DecalMaxStatic;
         public static ConfigEntry<int> DecalMaxDynamic;
         public static ConfigEntry<int> DecalCullDistance;
+        public static ConfigEntry<bool> MuzzleShadowsOff;
+        public static ConfigEntry<bool> MuzzleSmokeOncePerFrame;
 
         // 4. Experimental
         public static ConfigEntry<bool> PhysicsHalfRate;
@@ -107,6 +109,7 @@ namespace TYR_DeClutterer
         public static ConfigEntry<float> ReflectionDelay;
         public static ConfigEntry<int> GrassDistance;
         public static ConfigEntry<bool> HideUnscrutinized;
+        public static ConfigEntry<bool> SortByMaterial;
 
         public static bool IsFarMode => Mode.Value == ModeFar;
 
@@ -119,9 +122,9 @@ namespace TYR_DeClutterer
                 new AcceptableValueList<string>(LangKo, LangEn));
             Preset = Bind(cfg, SecGeneral, "Preset", PresetCustom,
                 "프리셋 (한 번에 설정)", "고르면 아래 2·3번 항목을 한꺼번에 맞춥니다. 그 뒤 2·3번 항목을 직접 바꾸면 '직접 설정'으로 바뀝니다. 4번(실험적)은 건드리지 않습니다.\n" +
-                "가벼움: 잡동사니를 멀리서만 숨김 + 탄피 개수 제한\n균형: 잡동사니 완전히 숨김 + 부드러운 파티클·풀·실시간 반사 끔 + 총알 자국 줄임\n최대: 균형 + 그림자 단순화·조명 수·LOD 낮춤",
+                "가벼움: 잡동사니를 멀리서만 숨김 + 탄피 개수 제한 + 총구 연기 처리 1번\n균형: 잡동사니 완전히 숨김 + 부드러운 파티클·풀·실시간 반사 끔 + 총알 자국 줄임 + 남의 총구 화염 그림자 끔\n최대: 균형 + 그림자 단순화·조명 수·LOD 낮춤",
                 "Preset", "Picking one sets sections 2 and 3 at once. Changing any item in sections 2/3 afterwards switches this to 'Custom'. Section 4 (experimental) is never touched.\n" +
-                "Light: hide clutter only at distance + shell cap\nBalanced: hide clutter completely + soft particles/vegetation/realtime reflections off + fewer bullet decals\nMax: Balanced + simpler shadows, fewer pixel lights, lower LOD",
+                "Light: hide clutter only at distance + shell cap + muzzle smoke update once per frame\nBalanced: hide clutter completely + soft particles/vegetation/realtime reflections off + fewer bullet decals + no shadows from others' muzzle flashes\nMax: Balanced + simpler shadows, fewer pixel lights, lower LOD",
                 new AcceptableValueList<string>(PresetCustom, PresetOff, PresetLight, PresetBalanced, PresetMax));
             ToggleKey = Bind(cfg, SecGeneral, "Toggle Key", KeyboardShortcut.Empty,
                 "레이드 중 켜기/끄기 키", "누를 때마다 이 모드 전체를 잠시 끄고 켭니다(설정 파일은 안 바뀜). 같은 자리에서 FPS를 비교할 때 쓰세요. 기본은 키 없음.",
@@ -219,6 +222,12 @@ namespace TYR_DeClutterer
             DecalCullDistance = Bind(cfg, SecFramesaver, "Decal Draw Distance", 0,
                 "총알 자국 보이는 거리 (m)", "0 = 게임 기본(보통 100m). 이보다 먼 자국은 그리지 않습니다.", "Decal draw distance (m)", "0 = game default (usually 100 m). Decals farther than this are not drawn.",
                 new AcceptableValueRange<int>(0, 100));
+            MuzzleShadowsOff = Bind(cfg, SecFramesaver, "Muzzle Flash Shadows Off", false,
+                "다른 사람 총구 화염 그림자 끄기", "총을 쏠 때 번쩍이는 불빛이 그림자를 만들면 게임이 주변을 그림자용으로 최대 6번 다시 그립니다(총격전에서 그림자 작업이 2배 넘게 늘어남). 켜면 봇·다른 플레이어의 총구 불빛은 그대로 주변을 밝히고 그림자만 안 만듭니다. 내 총은 그대로입니다.",
+                "Others' muzzle flashes cast no shadows", "A muzzle flash that casts shadows makes the game redraw the area around it up to 6 times for the shadow map (more than doubles the shadow work in a firefight). With this on, bots' and other players' flashes still light things up, just without shadows. Your own gun is left alone.");
+            MuzzleSmokeOncePerFrame = Bind(cfg, SecFramesaver, "Muzzle Smoke Fade Once Per Frame", false,
+                "총구 연기 실내 처리 프레임당 1번", "게임은 총 한 자루마다 매 프레임 '총구 연기가 실내인지' 계산을 다시 합니다(모든 총이 같은 값을 공유하는데도). 그래서 총이 많을수록 일이 늘고, 실내·실외 전환이 총 수만큼 빨라지는 버그도 있습니다. 켜면 프레임당 한 번만 합니다. 보이는 차이는 실내로 들어갈 때 연기 색 전환이 원래 의도대로 1초에 걸쳐 바뀌는 정도입니다.",
+                "Muzzle smoke indoor check once per frame", "Every gun in the world redoes the shared 'is the muzzle smoke indoors' update each frame, so the work grows with the number of guns and the indoor/outdoor fade runs that many times too fast (a game bug). With this on it runs once per frame. The only visible change: the smoke's indoor fade takes the intended ~1 s.");
 
             // ── 4. 실험적 ───────────────────────────────────────────
             PhysicsHalfRate = Bind(cfg, SecExperimental, "Physics Half Rate", false,
@@ -238,6 +247,9 @@ namespace TYR_DeClutterer
             HideUnscrutinized = Bind(cfg, SecExperimental, "Hide Everything Small", false,
                 "이름 상관없이 작은 장식 전부 숨김", "원본의 'Unscrutinized'. 이름 목록과 상관없이 충돌체 없는 작은 장식을 전부 숨깁니다. FPS는 크게 오르지만 맵이 휑해지고 엉뚱한 물체가 사라질 수 있습니다. 2번의 항목별 선택은 무시됩니다.",
                 "Hide everything small", "The original 'Unscrutinized' option: hides every small collider-less decoration regardless of name. Big FPS gain, but maps look bare and odd objects may vanish. Per-category toggles in section 2 are ignored.");
+            SortByMaterial = Bind(cfg, SecExperimental, "Sort By Material", false,
+                "불투명 물체를 재질별로 묶어 그리기", "메인 카메라가 불투명 물체를 '가까운 것부터' 대신 '같은 재질끼리' 그립니다. 재질 전환이 줄어 CPU 일이 조금 줄고, 대신 그래픽카드가 뒤에 가려진 것까지 칠하는 일이 조금 늘어납니다. 화면은 똑같습니다. CPU가 병목인 PC(대부분의 타르코프)에서만 이득이고, 그래픽카드가 한계인 PC에선 오히려 느려질 수 있으니 '효과 측정 키'로 확인하세요.",
+                "Draw opaque objects grouped by material", "The main camera draws solid objects grouped by material instead of nearest first: fewer material switches for the CPU, a little more shading for the graphics card (hidden things behind nearer ones get shaded too). The picture is the same. Only helps when the CPU is the limit (usual in Tarkov); on a GPU-limited PC it can be slower — check with the benchmark key.");
 
             ApplyLanguage();
             Language.SettingChanged += (_, __) => ApplyLanguage();
@@ -281,6 +293,7 @@ namespace TYR_DeClutterer
                     SetDeclutter(true, ModeFar);
                     FramesaverEnabled.Value = true;
                     SetGraphics(false, 1, false, false, false, CascadeDefault, 1, 0, 1f);
+                    SetMuzzle(false, true);
                     ShellCap.Value = 100;
                     DecalMaxStatic.Value = 0;
                     DecalMaxDynamic.Value = 0;
@@ -290,6 +303,7 @@ namespace TYR_DeClutterer
                     SetDeclutter(true, ModeHide);
                     FramesaverEnabled.Value = true;
                     SetGraphics(true, 2, true, true, false, CascadeDefault, 1, 0, 1f);
+                    SetMuzzle(true, true);
                     ShellCap.Value = 60;
                     DecalMaxStatic.Value = 250;
                     DecalMaxDynamic.Value = 0;
@@ -299,6 +313,7 @@ namespace TYR_DeClutterer
                     SetDeclutter(true, ModeHide);
                     FramesaverEnabled.Value = true;
                     SetGraphics(true, 4, true, true, true, CascadeTwo, 2, 0, 1.5f);
+                    SetMuzzle(true, true);
                     ShellCap.Value = 30;
                     DecalMaxStatic.Value = 150;
                     DecalMaxDynamic.Value = 100;
@@ -312,6 +327,12 @@ namespace TYR_DeClutterer
             DeclutterEnabled.Value = on;
             Mode.Value = mode;
             Garbage.Value = Heaps.Value = Cartridges.Value = FakeFood.Value = Decals.Value = Puddles.Value = Shards.Value = true;
+        }
+
+        private static void SetMuzzle(bool shadowsOff, bool smokeOnce)
+        {
+            MuzzleShadowsOff.Value = shadowsOff;
+            MuzzleSmokeOncePerFrame.Value = smokeOnce;
         }
 
         private static void SetGraphics(bool softParticlesOff, int particleDiv, bool softVegOff, bool reflOff, bool hardShadows,

@@ -86,6 +86,29 @@ namespace TYR_DeClutterer
         }
     }
 
+    // 메인 카메라의 불투명 물체 정렬: 가까운 것부터 → 재질별(실험적). 카메라가 바뀌거나 끄면 원래 모드로 되돌린다.
+    internal static class MaterialSort
+    {
+        private static Camera _camera;
+        private static UnityEngine.Rendering.OpaqueSortMode _was;
+
+        public static void Tick()
+        {
+            Camera camera = Plugin.Active && Settings.SortByMaterial.Value ? EFT.CameraControl.CameraManager.Instance.Camera : null;
+            if (_camera != null && _camera != camera) Restore();
+            if (camera == null || _camera != null) return;
+            _was = camera.opaqueSortMode;
+            camera.opaqueSortMode = UnityEngine.Rendering.OpaqueSortMode.NoDistanceSort;
+            _camera = camera;
+        }
+
+        public static void Restore()
+        {
+            if (_camera != null && _camera.opaqueSortMode == UnityEngine.Rendering.OpaqueSortMode.NoDistanceSort) _camera.opaqueSortMode = _was;
+            _camera = null;
+        }
+    }
+
     // 레이드(맵) 단위 설정: 총알 자국 상한, 풀 거리, 주변 반사 갱신 간격.
     internal static class WorldTweaks
     {
