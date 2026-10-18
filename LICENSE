@@ -1,0 +1,41 @@
+This repository mixes two kinds of material. Read both parts.
+
+PART A - Original material (NOT covered by the MIT license below)
+
+Tyrian-DeClutterer by Tyrian (Xenoxia8953), https://github.com/Xenoxia8953/Tyrian-DeClutterer,
+including the Framesaver ideas by Ari that it contains, was published without a license.
+Its design and feature set, the clutter name lists (the keyword lists in src/ClutterRules.cs)
+and anything else taken over from that mod remain the property of their original authors.
+No rights to that material are granted here. If the original authors ask, it will be removed.
+
+PART B - New material by R_F (MIT license)
+
+Everything written for this SPT 4.1 port by R_F (danyhappy564-cmyk) and not taken over from the
+original mod - for example the rewritten code structure for SPT 4.1, the frame-budgeted scanner,
+the decal gate, presets and Korean/English settings texts, the benchmark and inspect tools, the
+muzzle flash and material sorting features and src/StatusBridge.cs - is licensed as follows:
+
+MIT License
+
+Copyright (c) 2026 R_F (danyhappy564-cmyk)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Ideas for the muzzle flash and material sorting features came from Smoothie by TominoCZ
+(https://github.com/TominoCZ/Smoothie, CC BY-NC-SA 4.0); that code was not copied.

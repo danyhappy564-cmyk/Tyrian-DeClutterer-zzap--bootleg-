@@ -16,6 +16,8 @@
    - Repository: [TominoCZ/Smoothie](https://github.com/TominoCZ/Smoothie)
    - License: CC BY-NC-SA 4.0
 
+- **This Port By:** R_F (danyhappy564-cmyk) — new code for the 4.1 port is MIT; material from the original mod stays with its authors (no license granted). See `LICENSE`.
+
 1. **Reflection & Take-Downs:** I deeply reflect on the ECOT incident. As an AI-assisted "vibe coder," I will immediately delete files if the original authors ask.
 2. **No Re-Distribution:** These ported builds are unverified, temporary fixes. Please do NOT re-upload or share them anywhere else.
 3. **Do Not Pester Original Authors:** Never report bugs or pester original modders regarding issues from my unofficial ports.
@@ -26,6 +28,7 @@
 
 ## 변경 이력
 
+- 2026-10-18 11:55 — 라이선스 표기 추가(`LICENSE`, README '라이선스'). 원본에 라이선스가 없어서 원본에서 온 부분은 원작자 권리로 두고, 이 포팅에서 새로 쓴 부분만 MIT로 나눠 적었습니다. 코드 변화 없음.
 - 2026-10-18 10:15 — **2.1.0.** ① '3. 그래픽 가볍게'에 두 항목 추가: **다른 사람 총구 화염 그림자 끄기**(봇·다른 플레이어가 쏠 때 번쩍이는 불빛이 그림자까지 만들면 게임이 주변을 최대 6번 다시 그려서, 총격전에서 그림자 작업이 2배 넘게 늘어남 → 불빛은 그대로, 그림자만 끔. 내 총은 그대로)와 **총구 연기 실내 처리 프레임당 1번**(총 한 자루마다 매 프레임 같은 계산을 반복하던 게임 버그 — 결과는 같고 계산만 줄어듦). 프리셋 '가벼움'은 연기 처리만, '균형'·'최대'는 둘 다 켭니다. ② '4. 실험적'에 **불투명 물체를 재질별로 묶어 그리기** 추가(CPU 일을 조금 그래픽카드로 옮김 — CPU가 한계인 PC에서만 이득이라 기본 꺼짐, 효과 측정 키로 확인 권장). ③ RAM 클리너(zzap) 웹 페이지에 **'잡동사니·그래픽' 탭**이 생겨, 브라우저에서 이 모드의 설정 전체를 보고 바로 바꿀 수 있습니다(F12와 같은 항목·같은 동작, 현재 상태 표시, 언어는 RAM 클리너를 따라감). 아이디어는 Smoothie(TominoCZ)에서 가져와 4.1 게임 코드로 확인한 뒤 새로 짰습니다. 빌드만 확인, **인게임 확인 전**입니다.
 - 2026-10-15 00:12 — 세 번째 인게임 측정(세관, FPS 상한 해제). **완전히 숨김: 측정 7번 중앙값 +10%(범위 -2 ~ +24%), 약 110~135fps 구간.** 멀리서만 숨김은 +3%(1번). 측정 키 끊김은 사라졌습니다(되돌리기 한 프레임 최대 2ms). 로그 요약에서 맵 데칼 수와 이름에 decal이 든 일반 물체 수가 한 칸에 섞여 나오던 표시를 나눴습니다.
 - 2026-10-14 23:59 — 두 번째 인게임 로그(스트리트, 후보 15만 개·숨김 2만 6천 개) 반영. 메모리 문제는 해결된 것을 확인했습니다(검사 중 쓰레기 메모리 거의 0). ① 효과 측정 키를 누를 때마다 숨긴 물체 1만여 개를 한 프레임에 되살려 40ms 끊김이 나던 것을 여러 프레임에 나눠 되돌리도록 고쳤습니다(켜기/끄기 키도 같음). ② 레이드 시작 때 15만 개를 한 번에 찾느라 한 프레임 92ms 걸리던 부분도 나눴습니다. ③ 측정 결과에 '숨김 0'으로 나오던 표시 오류와, 다시 적용 요약의 '총 시간'이 앞 기록부터 이어서 재지던 오류를 고쳤습니다. ④ FPS 제한이 걸려 있으면 측정 차이가 안 보인다는 안내를 넣었습니다. 인게임 재확인 전입니다.
@@ -174,6 +177,14 @@
 | 물리 절반이 실제로는 슬로모션 | 시간 보정 |
 | 탄피 아예 끔 | 개수 제한으로 변경 |
 | 4.1에 없는 구름 컨트롤러·주변광 메서드 패치 | 삭제하거나 안전한 방식(반사 갱신 간격)으로 대체 |
+
+## 라이선스
+
+이 저장소는 두 가지가 섞여 있어서 라이선스를 나눠 적었습니다(자세한 건 `LICENSE`).
+
+- **원본에서 온 것 — 원작자 권리:** Tyrian-DeClutterer(Tyrian)와 그 안의 Framesaver(Ari)는 라이선스 없이 공개됐습니다. 그래서 원본의 기능 구성, 숨길 물체 이름 목록(`src/ClutterRules.cs`의 키워드), 원본에서 가져온 나머지는 원작자 것이고 여기서 아무 권리도 주지 않습니다. 원작자가 요청하면 내립니다.
+- **이 포팅에서 새로 쓴 것 — MIT:** 4.1용으로 새로 짠 코드 구조, 프레임 나눠 검사, 데칼 처리, 프리셋·한/영 설정 문구, 효과 측정·물체 확인 키, 총구 화염·재질 정렬 기능, `src/StatusBridge.cs` 등.
+- 총구 화염·재질 정렬은 Smoothie(TominoCZ, CC BY-NC-SA 4.0)에서 아이디어만 얻었고 코드는 가져오지 않았습니다.
 
 ## 직접 빌드하기
 
