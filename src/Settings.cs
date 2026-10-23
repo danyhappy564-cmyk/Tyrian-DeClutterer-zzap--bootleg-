@@ -110,6 +110,7 @@ namespace TYR_DeClutterer
         public static ConfigEntry<int> GrassDistance;
         public static ConfigEntry<bool> HideUnscrutinized;
         public static ConfigEntry<bool> SortByMaterial;
+        public static ConfigEntry<bool> DistantShadowFadeSkip;
 
         public static bool IsFarMode => Mode.Value == ModeFar;
 
@@ -250,6 +251,9 @@ namespace TYR_DeClutterer
             SortByMaterial = Bind(cfg, SecExperimental, "Sort By Material", false,
                 "불투명 물체를 재질별로 묶어 그리기", "메인 카메라가 불투명 물체를 '가까운 것부터' 대신 '같은 재질끼리' 그립니다. 재질 전환이 줄어 CPU 일이 조금 줄고, 대신 그래픽카드가 뒤에 가려진 것까지 칠하는 일이 조금 늘어납니다. 화면은 똑같습니다. CPU가 병목인 PC(대부분의 타르코프)에서만 이득이고, 그래픽카드가 한계인 PC에선 오히려 느려질 수 있으니 '효과 측정 키'로 확인하세요.",
                 "Draw opaque objects grouped by material", "The main camera draws solid objects grouped by material instead of nearest first: fewer material switches for the CPU, a little more shading for the graphics card (hidden things behind nearer ones get shaded too). The picture is the same. Only helps when the CPU is the limit (usual in Tarkov); on a GPU-limited PC it can be slower — check with the benchmark key.");
+            DistantShadowFadeSkip = Bind(cfg, SecExperimental, "Distant Shadow Fade Skip", false,
+                "먼 그림자 옛 지도 안 읽기", "멀리 있는 건물·지형 그림자는 새 그림자 지도가 다 그려지면 옛 지도에서 0.5초 동안 섞여 넘어갑니다. 그런데 게임은 섞기가 끝난 뒤에도 매 프레임 화면 전체 픽셀마다 두 지도를 다 읽습니다. 켜면 섞기가 끝난 뒤엔 새 지도만 읽습니다. 화면은 같아야 합니다. 그래픽카드가 한계인 PC에서만 이득(1440p 기준 프레임당 약 0.4ms)이고, CPU가 한계면 차이가 없습니다. 먼 그림자가 툭 바뀌거나 깜빡이면 끄세요.",
+                "Distant shadows: skip the old map after the fade", "When a new distant shadow map (far buildings and terrain) is finished it fades in over the old one for up to 0.5 s, but the game kept reading both maps for every pixel every frame long after the fade. With this on only the new map is read once the fade is done. The picture should be the same. Helps only when the graphics card is the limit (about 0.4 ms a frame at 1440p). Switch it off if distant shadows pop or flicker.");
 
             ApplyLanguage();
             Language.SettingChanged += (_, __) => ApplyLanguage();

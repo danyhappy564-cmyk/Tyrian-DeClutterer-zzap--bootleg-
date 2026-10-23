@@ -26,6 +26,48 @@ namespace TYR_DeClutterer
             Try(h, "Muzzle flash shadows", AccessTools.Method(typeof(MuzzleLight), nameof(MuzzleLight.OnShot)), postfix: nameof(MuzzleShotPostfix));
             Try(h, "Muzzle smoke indoor fade", AccessTools.Method(typeof(Systems.Effects.Effects), nameof(Systems.Effects.Effects.UpdateMBOITIndoorAttenuation), Type.EmptyTypes),
                 prefix: nameof(MuzzleSmokePrefix));
+            Try(h, "Distant shadow fade", AccessTools.Method(typeof(DistantShadow), nameof(DistantShadow.SetupComputeShadowMaskCommandBuffer)),
+                prefix: nameof(DistantFadePrefix), postfix: nameof(DistantFadePostfix));
+        }
+
+        // ── 먼 그림자: 섞기 끝난 뒤 옛 지도 안 읽기 ─────────────────────
+        // 먼 그림자 지도는 새로 다 그려질 때마다 옛 지도에서 짧게(최대 0.5초) 섞여 넘어간다. 마스크를 그리는
+        // 함수가 매 프레임 그리기 목록을 비우고 다시 만드는데, 섞기 키워드가 켜져 있으면 섞기가 끝난 뒤에도
+        // 화면 전체 픽셀마다 옛 지도까지 읽는다. 섞기 진행도(3번째 인자 Vector4의 z = 지난 시간 / 섞는 시간)가
+        // 1을 넘고 조금 더 지나면, 이 목록 안에서만 키워드를 끄고 목록 끝에서 다시 켠다(다른 그리기는 그대로).
+        // 인자는 이름 대신 순서(__0 = 명령 목록, __3 = 진행도)로 받는다: 게임이 인자 이름만 바꿔도 안 깨지게.
+        private const float DistantFadeDone = 1.1f; // 1.0 = 섞기 끝. 여유를 조금 둔다(프레임 몇 개 차이).
+        private static readonly AccessTools.FieldRef<DistantShadow, string> DistantBlendKeyword = TryFieldRef<DistantShadow, string>("BlendKeyword");
+        private static bool _distantError;
+
+        private static void DistantFadePrefix(DistantShadow __instance, UnityEngine.Rendering.CommandBuffer __0, Vector4 __3, out string __state)
+        {
+            __state = null;
+            try
+            {
+                if (!Plugin.Active || !Settings.DistantShadowFadeSkip.Value || __0 == null) return;
+                if (!__instance.EnableShadowsBlend || __3.z < DistantFadeDone) return;
+                string keyword = (DistantBlendKeyword != null ? DistantBlendKeyword(__instance) : null) ?? "DISTANT_SHADOWS_BLEND";
+                __0.DisableShaderKeyword(keyword);
+                __state = keyword;
+            }
+            catch (Exception e)
+            {
+                __state = null;
+                LogOnce(ref _distantError, "distant shadow fade", e);
+            }
+        }
+
+        // 프리픽스가 끈 경우에만 다시 켠다 = 게임이 원래 켜 둔 상태 그대로.
+        private static void DistantFadePostfix(UnityEngine.Rendering.CommandBuffer __0, string __state)
+        {
+            if (__state != null && __0 != null) __0.EnableShaderKeyword(__state);
+        }
+
+        private static AccessTools.FieldRef<TObj, TField> TryFieldRef<TObj, TField>(string name) where TObj : class
+        {
+            try { return AccessTools.FieldRefAccess<TObj, TField>(name); }
+            catch { return null; }
         }
 
         // ── 남의 총구 화염 그림자 끄기 ───────────────────────────────
